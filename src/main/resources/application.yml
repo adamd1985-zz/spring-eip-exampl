@@ -1,0 +1,47 @@
+# Logging config.
+logging:
+    level:
+        root: INFO
+        org:
+            apache:
+                activemq: WARN
+            springframework:
+                integration: INFO
+        adamd: DEBUG
+    register-shutdown-hook: true
+    file: .\poc.log
+
+# Application
+app:
+    fail: false
+    integration:
+        style: DSL # XML or DSL
+    
+# Server config.    
+server:
+    context-path: /lotto-int-demo
+    port: 8080
+management:
+    context-path: /diagnostic
+endpoints:
+    health:
+        sensitive: true
+    shutdown:
+        enabled: true
+http:
+    mappers:
+        jsonPrettyPrint: true        
+        
+spring:
+    application:
+        name: int-demo
+    jmx:
+        enabled: true
+        default-domain: adamd
+    activemq:
+        in-memory: true
+        pool:
+            enabled: false
+    jackson:
+        serialization:
+            INDENT_OUTPUT: true

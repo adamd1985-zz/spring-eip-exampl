@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd
+		http://www.springframework.org/schema/integration/http
+        http://www.springframework.org/schema/integration/http/spring-integration-http.xsd
+        http://www.springframework.org/schema/integration/stream
+        http://www.springframework.org/schema/integration/stream/spring-integration-stream.xsd
+        http://www.springframework.org/schema/integration/jms 
+        http://www.springframework.org/schema/integration/jms/spring-integration-jms.xsd"
+	xmlns:int-jms="http://www.springframework.org/schema/integration/jms"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:stream="http://www.springframework.org/schema/integration/stream"
+	xmlns:int-http="http://www.springframework.org/schema/integration/http"
+	xmlns:task="http://www.springframework.org/schema/task">
+	
+	<alias name="jmsConnectionFactory" alias="connectionFactory"/>
+	
+    <int:channel id="lottoPlayRes"/>
+    <int:channel id="error"/>
+
+    <stream:stderr-channel-adapter
+        channel="error" 
+        append-newline="true" />
+
+    <int:gateway id="pickNumber"
+    	service-interface="adamd.integration.LottoPlayGateway"
+    	default-request-channel="walletReq"
+    	default-reply-channel="lottoPlayRes" 
+    	error-channel="error"
+    	async-executor="asyncExecutor" 
+    	default-reply-timeout="2000"
+    	default-request-timeout="2000">	
+        <int:method name="buy" payload-expression="#args[0]">
+            <int:header name="authToken" expression="#args[0]" />
+            <int:header name="lottoNumber" expression="#args[1]" />
+        </int:method>
+    </int:gateway>
+
+    <int:chain 
+        id="outputChain"
+        output-channel="lottoPlayRes"
+        input-channel="walletReq">
+        <int:object-to-json-transformer/>
+    
+	    <int-http:outbound-gateway 
+	        id="walletGateway"
+	        url="http://localhost:8080/lotto-int-demo/{username}/wallet/purchase/lottonumber"
+	        http-method="POST"
+	        extract-request-payload="true"
+	        expected-response-type="adamd.domain.AuthToken"
+	        charset="UTF-8"
+	        request-factory="httpRequestFactory">
+	        <int-http:uri-variable 
+	            name="username"
+	            expression="'number1'"/>
+	    </int-http:outbound-gateway>
+	    
+	    <int:object-to-json-transformer/>
+	    
+	    <int-jms:outbound-gateway 
+            id="eventPublisherGateway"
+            correlation-key="coId"            
+            request-pub-sub-domain="true"
+            request-destination-name="topic.req"             
+            reply-destination-name="topic.res"
+            reply-pub-sub-domain="true"
+            time-to-live="50000" 
+            receive-timeout="20000">
+        </int-jms:outbound-gateway>
+        
+        <int:json-to-object-transformer type="adamd.domain.Ticket"/>
+    </int:chain>
+    
+    <int-jms:message-driven-channel-adapter 
+        id="jmsIn"
+    	destination-name="topic.req" 
+    	channel="msgInput" 
+    	error-channel="error" 
+    	pub-sub-domain="true"/>
+
+    <int:channel id="msgInput"/>         
+    <int:channel id="msgOutput"/>
+            
+   <int:chain
+        id="inputChain" 
+        input-channel="msgInput"
+        output-channel="msgOutput">        
+        
+        <int-http:outbound-gateway 
+            id="lottGameGateway"
+            url="http://localhost:8080/lotto-int-demo/lotto/ticket/{number}"
+            http-method="GET"
+            extract-request-payload="true"
+            expected-response-type="adamd.domain.Ticket"
+            charset="UTF-8"
+            request-factory="httpRequestFactory"
+            reply-timeout="10000">
+            <int-http:uri-variable 
+                name="number"
+                expression="headers.lottoNumber"/>
+        </int-http:outbound-gateway>
+        
+        <int:header-filter 
+            header-names="lottoNumber, http_statusCode"/>
+
+        <int:object-to-json-transformer/>
+    </int:chain>
+    
+    <int-jms:outbound-channel-adapter
+        channel="msgOutput"
+        destination-name="topic.res"
+        pub-sub-domain="true"/>
+    
+    <int:wire-tap 
+        pattern="*" 
+        order="2" 
+        channel="logger" 
+        id="wireTap"/>
+        
+    <int:logging-channel-adapter 
+       id="logger" 
+       level="INFO"
+       log-full-message="true"
+       logger-name="WIRETAP"/>
+              
+</beans>
