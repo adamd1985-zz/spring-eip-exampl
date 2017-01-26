@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 /**
  * Main entry point.
  * 
- * @author ADAM-SE
+ * @author adamd
  * @version 1
  */
 @SpringBootApplication
@@ -30,16 +30,5 @@ public class Main {
 
 		final ConfigurableApplicationContext ctx = SpringApplication.run(Main.class, args);
 		ctx.registerShutdownHook();
-
-		Main main = ctx.getBean(Main.class);
-		main.runMain();
-	}
-
-
-	public void runMain()   {
-		LOGGER.info("App started --  buying tickets.");
-
-		LOGGER.info("App started --  Purchase complete.");
-
 	}
 }

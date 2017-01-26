@@ -15,22 +15,4 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @ImportResource(locations = "classpath:/META-INF/spring/integration/lotto-flow-config.xml")
 public class XmlConfig {
 
-	@Bean("asyncExecutor")
-	public Executor getAsyncExecutor() {
-		ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-		executor.setCorePoolSize(2);
-		executor.setMaxPoolSize(2);
-		executor.setQueueCapacity(50);
-		executor.setThreadNamePrefix("TestThread-");
-		executor.initialize();
-		return executor;
-	}
-
-	@Bean("httpRequestFactory")
-	public ClientHttpRequestFactory getHttpRequestFactory() {
-		SimpleClientHttpRequestFactory reqFactory = new SimpleClientHttpRequestFactory();
-		reqFactory.setConnectTimeout(1000 * 60 * 4);
-		reqFactory.setReadTimeout(1000 * 60 * 4);
-		return reqFactory;
-	}
 }
