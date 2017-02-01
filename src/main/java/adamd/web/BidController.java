@@ -21,7 +21,7 @@ public class BidController {
 	private AuctionFlowGateway gateway;
 
 	@RequestMapping(method = RequestMethod.GET, path = "/auction/example/bid")
-	public void bid(@RequestParam("amount") Integer amount) {
+	public BidReciept bid(@RequestParam("amount") Integer amount) {
 		final SecurityToken secToken = new SecurityToken("anon", new String[] { "AUCTION", "WALLET" });
 		final Bid bid = new Bid("example", amount);
 		final BidReciept bidReceipt = gateway.bid(secToken, bid);
@@ -32,5 +32,7 @@ public class BidController {
 		else {
 			LOGGER.error("Flow failed");
 		}
+
+		return bidReceipt;
 	}
 }

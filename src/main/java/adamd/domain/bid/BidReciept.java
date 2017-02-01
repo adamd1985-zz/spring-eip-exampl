@@ -21,10 +21,7 @@ public class BidReciept {
 		this.paymentReceipt = null;
 	}
 
-	@JsonCreator
-	public BidReciept(@JsonProperty("id") String id,
-			@JsonProperty("itemName") String itemName,
-			@JsonProperty("paymentReceipt") Receipt paymentReceipt) {
+	public BidReciept(String id, String itemName, Receipt paymentReceipt) {
 		this.id = id;
 		this.itemName = itemName;
 		this.paymentReceipt = paymentReceipt;

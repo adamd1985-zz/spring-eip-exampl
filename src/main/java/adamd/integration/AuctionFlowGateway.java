@@ -17,6 +17,6 @@ import adamd.domain.security.SecurityToken;
 @MessagingGateway
 public interface AuctionFlowGateway {
 
-	@Gateway(requestChannel = "auction.input", replyChannel = "auction.output", requestTimeout = 10000, replyTimeout = 50000)
+	@Gateway(requestChannel = "auction.in", replyChannel = "auction.out", requestTimeout = 10000, replyTimeout = 50000)
 	BidReciept bid(@Header("secToken") SecurityToken token, Bid bid);
 }

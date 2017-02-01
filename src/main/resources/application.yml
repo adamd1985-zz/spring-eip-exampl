@@ -1,3 +1,4 @@
+# Logging config.
 logging:
     level:
         root: INFO
@@ -8,13 +9,17 @@ logging:
                 integration: INFO
         adamd: DEBUG
     register-shutdown-hook: true
-    file: .\AuctionApp.log
+    file: .\poc.log
+
+# Application
 app:
     fail: false
     integration:
-        style: DSL
+        style: XML # XML or DSL
+    
+# Server config.    
 server:
-    context-path: /lotto-int-demo
+    context-path: /auction-demo
     port: 8080
 management:
     context-path: /diagnostic
@@ -25,7 +30,9 @@ endpoints:
         enabled: true
 http:
     mappers:
-        jsonPrettyPrint: true
+        jsonPrettyPrint: true        
+
+# Application        
 spring:
     application:
         name: int-demo
