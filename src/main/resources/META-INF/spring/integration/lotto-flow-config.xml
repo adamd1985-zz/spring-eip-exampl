@@ -15,7 +15,9 @@
 	   but spring integration searches for 'connectionFactory'
 	-->
 	<alias name="jmsConnectionFactory" alias="connectionFactory"/>
-        
+    
+    <int:message-history/>
+    
     <!-- Payment flow -->
     <int:channel id="payment.in"/>
     <int:channel id="payment.out"/>
@@ -29,10 +31,8 @@
         
         <int-jms:outbound-gateway 
             correlation-key="auctionCoId"            
-            request-pub-sub-domain="false"
             request-destination-name="jms.payment.in"             
-            reply-destination-name="jms.payment.out"
-            reply-pub-sub-domain="true"/>
+            reply-destination-name="jms.payment.out"/>
             
         <int:json-to-object-transformer type="adamd.domain.payment.Receipt"/>
     </int:chain>
@@ -90,10 +90,8 @@
     
 	    <int-jms:outbound-gateway 
             correlation-key="auctionCoId"            
-            request-pub-sub-domain="false"
             request-destination-name="jms.bid.in"             
-            reply-destination-name="jms.bid.out"
-            reply-pub-sub-domain="true"/>
+            reply-destination-name="jms.bid.out"/>
             
 	    <int:json-to-object-transformer type="adamd.domain.bid.BidReciept"/> 
 	   
