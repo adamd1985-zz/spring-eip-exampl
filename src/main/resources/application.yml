@@ -15,12 +15,12 @@ logging:
 app:
     fail: false
     integration:
-        style: XML # XML or DSL
+        style: DSL # XML or DSL
     
 # Server config.    
 server:
     context-path: /auction-demo
-    port: 8080
+    port: 8087
 management:
     context-path: /diagnostic
 endpoints:

@@ -1,13 +1,18 @@
 package adamd.integration.config;
 
-import java.util.UUID;
-
-import javax.jms.ConnectionFactory;
-
+import adamd.domain.bid.AuctionService;
+import adamd.domain.bid.Bid;
+import adamd.domain.bid.BidReciept;
+import adamd.domain.header.CustomHeaderMapper;
+import adamd.domain.payment.Payment;
+import adamd.domain.payment.PaymentService;
+import adamd.domain.payment.Receipt;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.integration.annotation.IntegrationComponentScan;
+import org.springframework.integration.channel.PublishSubscribeChannel;
+import org.springframework.integration.config.EnableMessageHistory;
 import org.springframework.integration.dsl.IntegrationFlow;
 import org.springframework.integration.dsl.IntegrationFlows;
 import org.springframework.integration.dsl.channel.MessageChannels;
@@ -17,17 +22,10 @@ import org.springframework.integration.handler.LoggingHandler;
 import org.springframework.integration.handler.LoggingHandler.Level;
 import org.springframework.integration.json.JsonToObjectTransformer;
 import org.springframework.integration.json.ObjectToJsonTransformer;
-import org.springframework.integration.transformer.GenericTransformer;
-import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.handler.annotation.Header;
 
-import adamd.domain.bid.AuctionService;
-import adamd.domain.bid.Bid;
-import adamd.domain.bid.BidReciept;
-import adamd.domain.payment.Payment;
-import adamd.domain.payment.PaymentService;
-import adamd.domain.payment.Receipt;
+import javax.jms.ConnectionFactory;
+import java.util.UUID;
 
 /**
  * Java DSL configuration. with the {@code @IntegrationComponentScan} it will connect any
@@ -39,6 +37,7 @@ import adamd.domain.payment.Receipt;
 @Configuration
 @IntegrationComponentScan(basePackageClasses = { adamd.integration.AuctionFlowGateway.class })
 @ConditionalOnExpression("'${app.integration.style}' eq 'DSL'")
+@EnableMessageHistory
 public class DslConfig {
 
 	@Bean("error.channel")
@@ -54,7 +53,7 @@ public class DslConfig {
 				.get();
 	}
 
-	@Bean("auction.output")
+	@Bean("auction.out")
 	public MessageChannel auctionOutput() {
 		return MessageChannels.direct("auction.output").get();
 	}
@@ -62,7 +61,7 @@ public class DslConfig {
 	@Bean
 	public IntegrationFlow auctionFlow(ConnectionFactory connectionFactory) {
 		return IntegrationFlows
-				.from("auction.input")
+				.from("auction.in")
 				.enrich(e1 -> e1
 						.requestChannel(paymentIn())
 						.replyChannel(paymentOut())
@@ -79,6 +78,7 @@ public class DslConfig {
 						.requestDestination("jms.bid.in")
 						.replyDestination("jms.bid.out")
 						.replyPubSubDomain(true)
+						.headerMapper(customHeaderMapper())
 						.get())
 				.transform(Transformers.fromJson(Bid.class))
 				.handle((pld, hdrs) -> new BidReciept(UUID.randomUUID().toString(),
@@ -90,13 +90,13 @@ public class DslConfig {
 	}
 
 	@Bean("payment.in")
-	public MessageChannel paymentIn() {
-		return MessageChannels.direct("payment.in").get();
+	public PublishSubscribeChannel paymentIn() {
+		return MessageChannels.publishSubscribe("payment.in").get();
 	}
 
 	@Bean("payment.out")
-	public MessageChannel paymentOut() {
-		return MessageChannels.direct("payment.out").get();
+	public PublishSubscribeChannel paymentOut() {
+		return MessageChannels.publishSubscribe("payment.out").get();
 	}
 
 	@Bean
@@ -111,19 +111,21 @@ public class DslConfig {
 						.requestDestination("jms.payment.in")
 						.replyDestination("jms.payment.out")
 						.replyPubSubDomain(true)
-						.extractRequestPayload(true)
+						.headerMapper(customHeaderMapper())
 						.get())
 				.transform(Transformers.fromJson(Receipt.class))
 				.get();
 	}
 
 	@Bean
-	public IntegrationFlow paymentGatewayFlow(ConnectionFactory connectionFactory, PaymentService paymentService) {
+	public IntegrationFlow paymentGatewayFlow(ConnectionFactory connectionFactory,
+											  PaymentService paymentService) {
 		return IntegrationFlows
 				.from(Jms
 						.messageDrivenChannelAdapter(connectionFactory)
 						.errorChannel(errorChannel())
 						.destination("jms.payment.in")
+						.headerMapper(customHeaderMapper())
 						.get())
 				.transform(new JsonToObjectTransformer(adamd.domain.payment.Payment.class))
 				.log(LoggingHandler.Level.INFO, "Processing payment")
@@ -133,6 +135,7 @@ public class DslConfig {
 						.outboundAdapter(connectionFactory)
 						.configureJmsTemplate(c -> c.pubSubDomain(true))
 						.destination("jms.payment.out")
+						.headerMapper(customHeaderMapper())
 						.get())
 				.get();
 	}
@@ -144,6 +147,7 @@ public class DslConfig {
 						.messageDrivenChannelAdapter(connectionFactory)
 						.errorChannel(errorChannel())
 						.destination("jms.bid.in")
+						.headerMapper(customHeaderMapper())
 						.get())
 				.transform(new JsonToObjectTransformer(Bid.class))
 				.handle(auctionService, "bid")
@@ -153,7 +157,13 @@ public class DslConfig {
 						.outboundAdapter(connectionFactory)
 						.configureJmsTemplate(c -> c.pubSubDomain(true))
 						.destination("jms.bid.out")
+						.headerMapper(customHeaderMapper())
 						.get())
 				.get();
+	}
+
+	@Bean
+	public CustomHeaderMapper customHeaderMapper() {
+		return new CustomHeaderMapper();
 	}
 }
